@@ -20,7 +20,12 @@ class connect:
         self.state_size = len(self.gameState.binary)
         self.action_size = len(self.actionSpace)
     
-
+    def step(self, action):
+        next_state, value, done = self.gameState.takeAction(action)
+        self.gameState = next_state
+        self.currentPlayer = -self.currentPlayer
+        info = None
+        return ((next_state, value, done, info))
         
 
     def printGame(self, state):
@@ -57,12 +62,27 @@ class ConnectState:
         #omitting self.score
         
         self.binary = self.binary()
-        self.id = self._convertStateToId()
+        self.id = self.convertStateToId()
         
     #######
     # notes on making a move:
     # update the row sum, update the game state
     ######
+    
+    def binary(self):
+        board1d = self.board.flatten()
+        currentPlayer = np.zeros(42)
+        currentPlayerBoard[board1d == self.currentPlayer] = 1
+        
+        otherPlayerBoard = np.zeros(42)
+        otherPlayerBoard[board1d == -self.currentPlayer] = -1
+        
+        return (currentPlayer, otherPlayerBoard)
+    
+    def convertStateToId(self):
+        bothBinary = self.binary[0].append(self.binary[1])
+        return ''.join(map(str, bothBinary))
+    
 
     #returns a list of numbers representing (in absolute value) the list of valid moves on the connect 4 board
     def getValidActions(self, state):
@@ -101,10 +121,15 @@ class ConnectState:
     def gameEnded(self):
         if (sum(abs(state[i][j] for i in range(6) for j in range(7)) == 42):
             return True
-        winv, valv = self.checkVertical() 
-        winh, valh = self.checkHorizontal() 
-        wind, vald = self.checkDiagonal()
-        return winv or winh or wind, np.sign(sum(valv, valh, vald))
+        winv = self.checkVertical() 
+        winh = self.checkHorizontal() 
+        wind = self.checkDiagonal()
+        end = False
+        val = (0, 0)
+        if winv or winh or wind:
+            end = True
+            val = (-1, 1)
+        return end, val
     
             #all the check methods return a boolean and a value. 
             #the boolean represents whether the game has ended.
@@ -114,10 +139,10 @@ class ConnectState:
     def checkHorizontal(self):
         numInRow = 0
         for i in range(6):
-            win, val = self.checkHHelper(-self.currentPlayer, i)
+            win = self.checkHHelper(-self.currentPlayer, i)
             if (win):
-                return True, val
-        return False, 0
+                return True
+        return False, (0, 0)
     
     def checkHHelper(self, dv, i):
         #explaination on sheet.    
@@ -134,16 +159,16 @@ class ConnectState:
             elif (state[i][4] == dv):
                         if (state[i][5] == dv):
                             if (state[i][6] == dv):
-                                return True, dv                 
-        return False, dv
+                                return True             
+        return False
             
     def checkVertical(self):
         numInCol = 0
         for j in range(7):
-            win, val = self.checkVHelper(-self.currentPlayer, j)
+            win = self.checkVHelper(-self.currentPlayer, j)
             if (win):
-                return True, val
-        return False, 0
+                return True
+        return False, (0, 0)
     
     def checkVHelper(self, dv, j):
         #check center 2, then check if there are two pieces around it
@@ -155,28 +180,28 @@ class ConnectState:
                     return True, dv
             elif (self.board[4][j] == dv):
                 if (self.board[5][j] == dv):
-                    return True, dv
-        return False, 0
+                    return True
+        return False
                     
                     
     def checkDiagonal(self):
         for i in range(3, 6):
             for j in range(7):
                 if (self.board[i][j] == -self.currentPlayer):
-                    win, val = self.checkDHelper(i, j, -self.currentPlayer)
+                    win = self.checkDHelper(i, j, -self.currentPlayer)
                     if (win):
-                        return True, val
-        return False, 0
+                        return True
+        return False, (0, 0)
     
     def checkDHelper(self, i, j, dv):
         if (j <= 3):
             if (self.board[i-1][j+1] == dv):
                 if (self.board[i-2][j+2] == dv):
                     if (self.board[i-3][j+3] == dv):
-                        return True, dv
+                        return True
         if (j >= 3):
             if (self.board[i-1][j-1] == dv):
                 if (self.board[i-2][j-2] == dv):
                     if (self.board[i-3][j-3] == dv):
-                        return True, dv
-        return False, 0
+                        return True
+        return False
