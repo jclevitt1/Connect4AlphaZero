@@ -33,3 +33,7 @@ HIDDEN_CNN_LAYERS = [
 #### EVALUATION
 EVAL_EPISODES = 20
 SCORING_THRESHOLD = 1.3
+
+
+run_folder = './run/'
+run_archive_folder = './run_archive/'
