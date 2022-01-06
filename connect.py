@@ -8,6 +8,8 @@ class connect:
     #Action will be represented by:
     #
     
+    #omitting the "identities" function listed in the repo.
+    
     def __init__(self):
         self.game_name = 'Connect 4'
         #currentPlayer = 1 means it is O's turn.
@@ -20,12 +22,13 @@ class connect:
         self.state_size = len(self.gameState.binary)
         self.action_size = len(self.actionSpace)
     
+    #need to edit
     def step(self, action):
-        next_state, value, done = self.gameState.takeAction(action)
+        next_state, value, end = self.gameState.takeAction(action)
         self.gameState = next_state
         self.currentPlayer = -self.currentPlayer
         info = None
-        return ((next_state, value, done, info))
+        return ((next_state, value, end, info))
         
 
     def printGame(self, state):
@@ -89,7 +92,7 @@ class ConnectState:
         toReturn = []
         for i in range(7):
             if (self.validCol(state, i)):
-                toReturn.append(i + 1)         
+                toReturn.append(i)         
         return toReturn 
     
     def validCol(self, state, col):
@@ -97,6 +100,7 @@ class ConnectState:
             return False
         return True
 
+    #need to add a gameEnded clause of this function.
     def nextState(self, col):
         row = self.getRow(state, col)
         newBoard = self.board
@@ -108,7 +112,12 @@ class ConnectState:
         else:
             raise ValueError('This is not a valid move.')      
         newState = ConnectState(newBoard, -self.currentPlayer)
-        return newState
+        val = 0
+        end = 0
+        if newState.isEndGame:
+            val = newState.value[0]
+            end = 1
+        return (newState, newState.value[0], end)
     
     def getRow(self, state, col):
         for i in range(6):
