@@ -101,7 +101,7 @@ class ConnectState:
         return True
 
     #need to add a gameEnded clause of this function.
-    def nextState(self, col):
+    def takeAction(self, col):
         row = self.getRow(state, col)
         newBoard = self.board
         if (row < 6):
