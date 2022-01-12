@@ -88,14 +88,14 @@ class ConnectState:
     
 
     #returns a list of numbers representing (in absolute value) the list of valid moves on the connect 4 board
-    def getValidActions(self, state):
+    def getValidActions(self):
         toReturn = []
         for i in range(7):
-            if (self.validCol(state, i)):
+            if (self.validCol(i)):
                 toReturn.append(i)         
         return toReturn 
     
-    def validCol(self, state, col):
+    def validCol(self, col):
         if (abs(self.board[5][col]) == 1):
             return False
         return True

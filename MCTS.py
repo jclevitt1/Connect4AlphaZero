@@ -43,7 +43,7 @@ class MCTS():
     def addNode(self, node):
         self.tree[node.id] = node
         
-    def moveToLeaf(self):
+    def goToEnd(self):
         currNode = self.root
         done = 0
         val = 0
@@ -103,9 +103,4 @@ class MCTS():
             
             lg.info('UPDATING EDGE STATS WIN: %f for player %d .... N = %d , W = %f , Q = %f',
                 sign, edge.currentPlayer, edge.stats['N'], edge.stats['W'], edge.stats['Q'])
-            
-            
-        
-        
-            
         
