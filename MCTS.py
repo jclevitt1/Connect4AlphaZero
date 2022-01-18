@@ -46,37 +46,50 @@ class MCTS():
     def goToEnd(self):
         currNode = self.root
         done = 0
-        val = 0
+        value = 0
         pathTaken = []
        
         #note the tree construction is not done within this class. This must be done prior to the
         #tree search of course.
+        bigEdge = None
+        bigAction = None
         while not currNode.isLeaf():
             totN = 0
-            lg.logger_mcts.info('PLAYER ... %d', currentNode.state.currentPlayer)
+            lg.logger_mcts.info('PLAYER ... %d', currNode.state.currentPlayer)
+            
             bigQU = -1000000
-            #confused on this first part.
-            if currNode == self.root:
-                a;sldkfj
-            else:
-                epsilon
+            #ommitted a first part.
                 
             for action, edge in currNode.edges:
                 totN += edge.stats['N']
                 
             #enumerate returns the same list but with an "indexed" first part of the tuple
-            for i, action, edge in enumerate(currNode.edges):
+            print(len(currNode.edges))
+            for i, (action, edge) in enumerate(currNode.edges):
                 #represents the upper confidence bound for the q value, where
                 #the q value is just the expected value of taking a given action.
+                print("P val")
+                print(edge.stats['P'])
+                print("cpuct val")
+                print(self.cpuct)
                 U = edge.stats['Q'] + self.cpuct * edge.stats['P'] * np.sqrt(totN)/(1+edge.stats['N'])
-
-                Q = edge.stats['W'] / edge.stats['N']
+                Q = 0
+                if not edge.stats['N'] == 0:
+                    Q = edge.stats['W'] / edge.stats['N']
+                    
+                    
                 
                 #some algorithms only maximize U, some algorithms maximize Q + U. Not sure what the diff
                 #is and if it is of much importance.
+                print(U)
                 if Q + U > bigQU:
                     bigQU = Q + U
                     bigEdge = edge
+                    bigAction = edge.action
+                    
+                if bigEdge is None:
+                    bigEdge = edge
+                if bigAction is None:
                     bigAction = action
                 
             lg.logger_mcts.info('DONE...%d', done)
@@ -84,12 +97,12 @@ class MCTS():
         
             currNode = bigEdge.nodeO
             pathTaken.append(bigEdge)
-            actionTaken.append(bigAction)
+            #actionTaken.append(bigAction)
             nextState, value, end = currNode.state.takeAction(bigAction)
         return currNode, value, done, pathTaken
             
     def backFill(self, leaf, pathTaken):
-        lg.logger.info('%%%%%%%% BEGINNING BACKPROPAGATION:  %%%%%%%%%%')
+        lg.logger_mcts.info('%%%%%%%% BEGINNING BACKPROPAGATION:  %%%%%%%%%%')
         loser = leaf.currentPlayer
         
         for edge in pathTaken:
@@ -101,6 +114,6 @@ class MCTS():
             edge.stats['W'] += sign
             edge.stats['Q'] = edge.stats['W']/edge.stats['N']
             
-            lg.info('UPDATING EDGE STATS WIN: %f for player %d .... N = %d , W = %f , Q = %f',
-                sign, edge.currentPlayer, edge.stats['N'], edge.stats['W'], edge.stats['Q'])
+            lg.logger_mcts.info('UPDATING EDGE STATS WIN: %f for player %d .... N = %d , W = %f , Q = %f',
+                sign, loser, edge.stats['N'], edge.stats['W'], edge.stats['Q'])
         

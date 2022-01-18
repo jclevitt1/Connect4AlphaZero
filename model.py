@@ -1,9 +1,12 @@
 import log as lg
 import numpy as np
 import config
+from keras import regularizers
 
 from keras.models import load_model, Model, Sequential
 from keras.layers import Input, Dense, Conv2D, Flatten, BatchNormalization, Activation, LeakyReLU, add
+from tensorflow.keras.optimizers import SGD
+import tensorflow as tf
 
 #may need to change the below
 from loss import softmax_cross_entropy_with_logits
@@ -17,6 +20,7 @@ from loss import softmax_cross_entropy_with_logits
 #https://github.com/AppliedDataSciencePartners/DeepReinforcementLearning,
 #in which in his model construction he uses softmax cross entropy
 
+#add some logging functions to this model.
 class GeneralModel():
     def __init__(self, regConstant, stepSize, inDim, outDim):
         self.regConstant = regConstant
@@ -33,8 +37,7 @@ class GeneralModel():
     
     #saves the current model in a file
     def write(self, game, version):
-        self.model.save(config.run_folder + '/models/version' + '{0}'.format(version) + '.h5'
-        return
+        self.model.save(config.run_folder + '/models/version' + '{0}'.format(version) + '.h5')
        
     #DIRECTLY FROM LOSS FILE. MAY NEED TO REWRITE IN THE FUTURE.
     def read(self, game, version):
@@ -44,7 +47,7 @@ class GeneralModel():
     #he uses some logging functions which i will not write myself until I understand them (and will make them useful for me in particular.
                         
                         
-class ResidualCnn(GeneralModel):
+class ResidualCNN(GeneralModel):
     def __init__(self, regConstant, stepSize, inDim, outDim, hiddenLayers):
         GeneralModel.__init__(self, regConstant, stepSize, inDim, outDim)
         self.hiddenLayers = hiddenLayers
@@ -54,11 +57,11 @@ class ResidualCnn(GeneralModel):
     def buildModel(self):
         modelInput = Input(shape = self.inDim, name = 'modelInput')
         
-        x = self.convLayer(modelInput, self.hiddenLayers[0]['filters'], self.hiddenLayers[0]['kernelSize']
+        x = self.convLayer(modelInput, self.hiddenLayers[0]['filters'], self.hiddenLayers[0]['kernelSize'])
                            
-        if len(self.hiddenLayers > 1):
+        if (self.numHiddenLayers > 1):
             for l in self.hiddenLayers[1:]:
-                x = self.hiddenLayer(x, h['filters'], h['kernelSize'])
+                x = self.hiddenLayer(x, l['filters'], l['kernelSize'])
                      
         valueHead = self.valueHead(x)
                            
@@ -74,14 +77,19 @@ class ResidualCnn(GeneralModel):
         return model
                            
     def convLayer(self, x, filters, kernelSize):
+        data_format = ''
+        if tf.test.is_built_with_cuda():
+            data_format = 'channels_first'
+        else:
+            data_format = 'channels_last'
         x = Conv2D(
             filters = filters
             , kernel_size = kernelSize
-            , data_format = 'channels_first'
+            , data_format = data_format
             , padding = 'same'
-            , use_bias = False,
-            , activation = 'linear'
-            , kernel_regularizer = regularizers.12(self.regConstant)
+            , use_bias = False
+            , activation='linear'
+            , kernel_regularizer = regularizers.l2(self.regConstant)
         ) (x)
         
         #unsure what these are for. seems to function to make the gradient smaller to increase efficiency in SGD? But at this point the loss function hasn't even been specified, so not certain. Could be setting the NN up specifically for this loss function?
@@ -94,15 +102,19 @@ class ResidualCnn(GeneralModel):
     #my intuition: this add function is there in order to KEEP TRACK of the development of the neural network itself, as given some LAST block, record the new one in order to debug later to see the relationship. Not sure if this actually serves any real functionality to the project itself though (other than debugging)
     def hiddenLayer(self, modelInput, filters, kernelSize):
         x = self.convLayer(modelInput, filters, kernelSize)
-        
+        data_format = ''
+        if tf.test.is_built_with_cuda():
+            data_format = 'channels_first'
+        else:
+            data_format = 'channels_last'
         x = Conv2D(
             filters = filters
             , kernel_size = kernelSize
-            , data_format = 'channels_first'
+            , data_format = data_format
             , padding = 'same'
             , use_bias = False
             , activation = 'linear'
-            , kernel_regularizer = regularizers.12(self.regConstant)
+            , kernel_regularizer = regularizers.l2(self.regConstant)
         )(x)
                            
         x = BatchNormalization(axis = 1)(x)
@@ -113,11 +125,87 @@ class ResidualCnn(GeneralModel):
                            
         return (x)
                            
+         #only difference between this first convolutional layer and the one constructed
+    #in the conv_layer function is the KERNEL SIZE. This must have to do with the size
+    #of the output. Note that the expected value of a move is simply a single value, thus it makes sense for the kernrel to be a 1 by 1 matrix. 
                            
+    #this method is taken straight from Applied Data Science Partners.
     def valueHead(self, x):
-        return 0
+        data_format = ''
+        if tf.test.is_built_with_cuda():
+            data_format = 'channels_first'
+        else:
+            data_format = 'channels_last'
+        x = Conv2D(
+            filters = 1
+            , kernel_size = (1, 1)
+            , data_format = data_format
+            , padding = 'same'
+            , use_bias = False
+            , activation = 'linear'
+            , kernel_regularizer = regularizers.l2(self.regConstant)
+        )(x)
                            
+        x = BatchNormalization(axis=1)(x)
+        x = LeakyReLU()(x)
+                           
+        x = Flatten()(x)
+                           
+        x = Dense(
+            20
+            , use_bias=False
+            , activation='linear'
+            , kernel_regularizer=regularizers.l2(self.regConstant)
+            )(x)
+
+        x = LeakyReLU()(x)
+
+        x = Dense(
+            1
+            , use_bias=False
+            , activation='tanh'
+            , kernel_regularizer=regularizers.l2(self.regConstant)
+            , name = 'value_head'
+            )(x)
+                           
+        return (x)
+       
+    #this method is taken straight from Applied Data Science Partners.
     def policyHead(self, x):
-        return 0
+        data_format = ''
+        if tf.test.is_built_with_cuda():
+            data_format = 'channels_first'
+        else:
+            data_format = 'channels_last'
+        x = Conv2D(
+        filters = 2
+        , kernel_size = (1,1)
+        , data_format=data_format
+        , padding = 'same'
+        , use_bias=False
+        , activation='linear'
+        , kernel_regularizer = regularizers.l2(self.regConstant)
+        )(x)
+
+        x = BatchNormalization(axis=1)(x)
+        x = LeakyReLU()(x)
+
+        x = Flatten()(x)
+
+        x = Dense(
+            self.outDim
+            , use_bias=False
+            , activation='linear'
+            , kernel_regularizer=regularizers.l2(self.regConstant)
+            , name = 'policy_head'
+            )(x)
+
+        return (x)
+                           
+                           
+    def makeValidModelInput(self, state):
+        modelInput = state.binary
+        modelInput = np.reshape(modelInput, self.inDim)
+        return (modelInput)
                           
                            

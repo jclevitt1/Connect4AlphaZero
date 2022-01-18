@@ -1,8 +1,23 @@
 from config import run_folder
-import logsetup
+import logging
 
 ### SET all LOGGER_DISABLED to True to disable logging
 ### WARNING: the mcts log file gets big quite quickly
+
+def setup_logger(name, log_file, level=logging.INFO):
+
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+
+    handler = logging.FileHandler(log_file)        
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    if not logger.handlers:
+        logger.addHandler(handler)
+
+    return logger
+
 
 LOGGER_DISABLED = {
 'main':False

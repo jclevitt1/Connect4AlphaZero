@@ -14,13 +14,13 @@ class connect:
         self.game_name = 'Connect 4'
         #currentPlayer = 1 means it is O's turn.
         self.currentPlayer = 1
-        self.gameState = ConnectState(np.zeros(6, 7))
+        self.reset()
         self.actionSpace = np.zeros(7,)
         self.pieces = {'1':'X', '0': '-', '-1':'O'}
         self.grid_shape = (6,7)
         self.input_shape = (2,6,7)
-        self.state_size = len(self.gameState.binary)
-        self.action_size = len(self.actionSpace)
+        self.stateSize = len(self.gameState.binary)
+        self.actionSize = len(self.actionSpace)
     
     #need to edit
     def step(self, action):
@@ -31,7 +31,7 @@ class connect:
         return ((next_state, value, end, info))
         
 
-    def printGame(self, state):
+    def printGame(self, state, log):
         gameStr = ''
         for i in range(6):
             for j in range(7):
@@ -44,12 +44,14 @@ class connect:
                     gameStr += 'O'
                 gameStr += ' | '
             gameStr += '\n'
-        print(gameStr)
+        log.info('******** CURRENT STATE: ************')
+        log.info(gameStr)
+        log.info('************************************')
     
     def reset(self):
-        self.gameState = ConnectState(np.zeros(6, 7))
+        self.gameState = ConnectState(np.zeros(shape=(6, 7), dtype = np.int16), 1)
         self.currentPlayer = 1
-        return self.
+        return self.gameState
         
 
     
@@ -60,7 +62,7 @@ class ConnectState:
         self.board = board
         self.currentPlayer = currentPlayer
         
-        self.allowedActions = self._allowedActions()
+        self.allowedActions = self.getAllowedActions()
         self.isEndGame, self.value = self.gameEnded()
         #omitting self.score
         
@@ -75,6 +77,7 @@ class ConnectState:
     def binary(self):
         board1d = self.board.flatten()
         currentPlayer = np.zeros(42)
+        currentPlayerBoard = np.zeros(42)
         currentPlayerBoard[board1d == self.currentPlayer] = 1
         
         otherPlayerBoard = np.zeros(42)
@@ -83,12 +86,14 @@ class ConnectState:
         return (currentPlayer, otherPlayerBoard)
     
     def convertStateToId(self):
-        bothBinary = self.binary[0].append(self.binary[1])
+        bothBinary = []
+        bothBinary.append(self.binary[0])
+        bothBinary.append(self.binary[1])
         return ''.join(map(str, bothBinary))
     
 
     #returns a list of numbers representing (in absolute value) the list of valid moves on the connect 4 board
-    def getValidActions(self):
+    def getAllowedActions(self):
         toReturn = []
         for i in range(7):
             if (self.validCol(i)):
@@ -102,10 +107,10 @@ class ConnectState:
 
     #need to add a gameEnded clause of this function.
     def takeAction(self, col):
-        row = self.getRow(state, col)
+        row = self.getRow(col)
         newBoard = self.board
         if (row < 6):
-            if (state.playerTurn == 1):
+            if (self.currentPlayer == 1):
                 newBoard[row][col] = 1
             else:
                 newBoard[row][col] = -1
@@ -119,7 +124,7 @@ class ConnectState:
             end = 1
         return (newState, newState.value[0], end)
     
-    def getRow(self, state, col):
+    def getRow(self, col):
         for i in range(6):
             if (abs(self.board[5-i][col]) == 1):
                 return (5-i) + 1
@@ -128,8 +133,18 @@ class ConnectState:
     #if the previous player played a winning move, this returns True (or if the board is filled). otherwise,
     #this returns False.
     def gameEnded(self):
-        if (sum(abs(state[i][j] for i in range(6) for j in range(7)) == 42):
-            return True
+        summin = 0
+        breakAgain = False
+        for i in range(6):
+            for j in range(7):
+                summin += abs(self.board[i][j])
+                if self.board[i][j] == 0:
+                    breakAgain = True
+                    break
+            if breakAgain:
+                break
+        if summin == 42:
+            return (True, (0, 0))
         winv = self.checkVertical() 
         winh = self.checkHorizontal() 
         wind = self.checkDiagonal()
@@ -154,7 +169,8 @@ class ConnectState:
         return False, (0, 0)
     
     def checkHHelper(self, dv, i):
-        #explaination on sheet.    
+        #explaination on sheet.  
+        state = self.board
         if (state[i][3] == dv):
             if (state[i][2] == dv):
                 if (state[i][1] == dv):

@@ -34,5 +34,5 @@ Some research went into this project, and a few of the files (listed below) were
 https://github.com/AppliedDataSciencePartners/DeepReinforcementLearning
 
 The files taken were:
-log.py, logsetup.py, (some of) model.py
+log.py, logsetup.py, (some of) model.py, loss.py
 
